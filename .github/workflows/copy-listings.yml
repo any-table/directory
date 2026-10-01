@@ -1,0 +1,60 @@
+# Copies the public listings into data/tables.json every night.
+#
+# This is what keeps the directory ownerless: if the website is ever lost,
+# captured, or shut down, anyone can rebuild the list from this repository.
+# The export contains no email addresses or other contact details, and the
+# job refuses to commit a file that looks like it does.
+
+name: Copy public listings
+
+on:
+  schedule:
+    - cron: '41 5 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: copy-listings
+  cancel-in-progress: false
+
+jobs:
+  copy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download
+        run: |
+          # The query string skips the edge cache so the copy is current.
+          curl -fsS --retry 3 --retry-delay 10 \
+            "https://tables.anytable.org/data/tables.json?nightly=$(date -u +%F)" \
+            -o data/tables.json.new
+
+      - name: Check
+        run: |
+          python3 - << 'PY'
+          import json, re, sys
+          text = open("data/tables.json.new").read()
+          data = json.loads(text)
+          assert data.get("license") == "CC0-1.0", "unexpected license field"
+          assert isinstance(data.get("listings"), list), "listings missing"
+          if re.search(r"[^\s\"@]+@[^\s\"@]+\.[a-z]{2,}", text, re.I):
+              sys.exit("The export appears to contain an email address. Not committing.")
+          print(f"{len(data['listings'])} listings, {len(data.get('removals', []))} removals")
+          PY
+          mv data/tables.json.new data/tables.json
+
+      - name: Commit if changed
+        run: |
+          if git diff --quiet -- data/tables.json && git ls-files --error-unmatch data/tables.json > /dev/null 2>&1; then
+            echo "No changes."
+            exit 0
+          fi
+          git config user.name "any table directory"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/tables.json
+          git commit -m "Copy public listings for $(date -u +%F)"
+          git push

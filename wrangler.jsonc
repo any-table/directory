@@ -1,0 +1,43 @@
+// Configuration for the directory Worker at tables.anytable.org.
+// Everything here fits the Cloudflare Workers Free plan. See DEPLOY.md.
+{
+  "name": "anytable-directory",
+  "main": "src/index.js",
+  "compatibility_date": "2026-09-01",
+
+  // Served only at tables.anytable.org, never on a workers.dev address.
+  "workers_dev": false,
+  "preview_urls": false,
+  "routes": [{ "pattern": "tables.anytable.org", "custom_domain": true }],
+
+  // Stylesheet, favicon, robots.txt. Served directly; the Worker handles the rest.
+  "assets": { "directory": "./public", "binding": "ASSETS" },
+
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "anytable-directory",
+      // Replace with the id printed by `wrangler d1 create anytable-directory`.
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "migrations"
+    }
+  ],
+
+  // Daily housekeeping: reminders, expiry, and purging unconfirmed listings.
+  "triggers": { "crons": ["23 4 * * *"] },
+
+  // RULES.md and PRIVACY.md are bundled as text and rendered as pages.
+  "rules": [{ "type": "Text", "globs": ["**/*.md"], "fallthrough": true }],
+
+  "vars": {
+    "SITE_URL": "https://tables.anytable.org",
+    "MAIL_FROM": "any table <tables@anytable.org>",
+    // Public Turnstile site key. The secret is set with `wrangler secret put`.
+    "TURNSTILE_SITE_KEY": "REPLACE_WITH_TURNSTILE_SITE_KEY",
+    // Stays under the email provider's free daily allowance.
+    "MAIL_DAILY_CAP": "90",
+    // Cloudflare Access for /admin. Leave empty to disable the admin page.
+    "ACCESS_TEAM_DOMAIN": "",
+    "ACCESS_AUD": ""
+  }
+}
