@@ -14,6 +14,7 @@ code() { curl -s -o /dev/null -w '%{http_code}' "$@"; }
 has()  { curl -s "$@" ; }
 check_code() { local want="$1" label="$2"; shift 2; local got; got=$(code "$@"); [[ "$got" == "$want" ]] && ok "$label ($got)" || bad "$label (got $got, want $want)"; }
 check_has()  { local needle="$1" label="$2"; shift 2; local body; body=$(has "$@"); grep -qF -- "$needle" <<<"$body" && ok "$label" || bad "$label"; }
+check_lacks() { local needle="$1" label="$2"; shift 2; local body; body=$(has "$@"); grep -qF -- "$needle" <<<"$body" && bad "$label" || ok "$label"; }
 last_link()  { grep -oE "$BASE/(confirm|manage)\?id=[a-z2-9]{10}&t=[A-Za-z0-9_-]+" "$LOG" | tail -1; }
 
 LISTING=(--data-urlencode setting=public --data-urlencode "place=Springfield Public Library, room 2"
@@ -112,12 +113,20 @@ check_code 303 "second listing published" "${O[@]}" --data-urlencode id="$ID2" -
 MANAGE2="$BASE/manage?id=$ID2&t=$TOK2"
 MSG=(--data-urlencode reply=visitor@example.com --data-urlencode "message=Hello, I'd like to come on Tuesday.")
 check_code 303 "second message sent (mail 5, message 2 of 2)" "${O[@]}" "${MSG[@]}" "$BASE/t/$ID2/contact"
-check_has "be sent right now" "third message refused by MAIL_MESSAGE_CAP" "${O[@]}" "${MSG[@]}" "$BASE/t/$ID2/contact"
+check_has "Writing to hosts is paused" "third message refused by MAIL_MESSAGE_CAP" "${O[@]}" "${MSG[@]}" "$BASE/t/$ID2/contact"
+check_has "Writing to hosts is paused" "listing page says messages are paused" "$BASE/t/$ID2?fresh=$RANDOM"
+check_lacks "/contact\"" "listing page hides the contact form" "$BASE/t/$ID2?fresh=$RANDOM"
+check_has "<form" "add form still open while only messages are paused" "$BASE/add"
 for n in 3 4 5; do
   [[ "$(add_as "host$n@example.com")" == 303 ]] && ok "listing $n accepted (mail $((n + 3)))" || bad "listing $n accepted (mail $((n + 3)))"
 done
-check_has "nothing was saved" "listing refused at MAIL_DAILY_CAP" "${O[@]}" "${LISTING[@]}" --data-urlencode email=host6@example.com --data-urlencode rules=yes "$BASE/add"
-check_code 303 "lost link request at the cap" "${O[@]}" --data-urlencode email=second@example.com "$BASE/lost"
+check_has "Nothing was saved" "listing refused at MAIL_DAILY_CAP" "${O[@]}" "${LISTING[@]}" --data-urlencode email=host6@example.com --data-urlencode rules=yes "$BASE/add"
+check_has "Adding tables is paused" "add page says adding is paused" "$BASE/add"
+check_lacks "<form" "add page hides the form" "$BASE/add"
+check_has "Sending new links is paused" "lost-link page says it is paused" "$BASE/lost"
+check_lacks "<form" "lost-link page hides the form" "$BASE/lost"
+check_has "Sending new links is paused" "lost link request refused at the cap" "${O[@]}" --data-urlencode email=second@example.com "$BASE/lost"
+check_has "Sending new links is paused" "same answer for an address with no listings" "${O[@]}" --data-urlencode email=nobody@example.com "$BASE/lost"
 check_code 200 "link still works when the new one couldn't be sent" "$MANAGE2"
 npx wrangler d1 execute anytable-directory --local \
   --command "UPDATE listings SET confirmed_at = '$(date -u -d '200 days ago' +%Y-%m-%dT%H:%M:%S.000Z)' WHERE id = '$ID2'" > /dev/null 2>&1

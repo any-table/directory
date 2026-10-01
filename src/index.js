@@ -11,7 +11,7 @@ import {
 import {
   randomId, newToken, sha256hex, verifyTurnstile, turnstileEnabled, sameOrigin, verifyAccess,
 } from "./security.js";
-import { sendMail, withinLimit, today } from "./mail.js";
+import { sendMail, withinLimit, today, canSendMail, countToday, untilReset } from "./mail.js";
 
 const DAY = 86_400_000;
 const REMIND_AFTER_DAYS = 150;
@@ -44,7 +44,7 @@ export default {
         if (path === "/sent") return sentPage(env, url);
         if (path === "/confirm") return confirmPage(env, url);
         if (path === "/manage") return managePage(env, url);
-        if (path === "/lost") return lostPage(env, url);
+        if (path === "/lost") return lostPage(env);
         if (path === "/rules") return markdownPage(env, "Listing rules", rulesMarkdown, "/rules");
         if (path === "/privacy") return markdownPage(env, "Privacy", privacyMarkdown, "/privacy");
         if (path === "/data/tables.json") return cached(request, ctx, 3600, () => exportData(env));
@@ -85,7 +85,8 @@ async function cached(request, ctx, ttl, build) {
   const hit = await cache.match(key);
   if (hit) return hit;
   const res = await build();
-  if (res.status === 200) {
+  // Pages that change with the day's email allowance mark themselves no-store.
+  if (res.status === 200 && !(res.headers.get("Cache-Control") || "").includes("no-store")) {
     const copy = new Response(res.body, res);
     copy.headers.set("Cache-Control", `public, max-age=${ttl}`);
     ctx.waitUntil(cache.put(key, copy.clone()));
@@ -114,6 +115,24 @@ const manageLink = (env, id, token) => `${env.SITE_URL}/manage?id=${id}&t=${toke
 
 function summaryLines(l) {
   return `  ${l.place}, ${l.city}\n  ${l.day}s at ${l.time} (${l.timezone})`;
+}
+
+// ---------------------------------------------------------------- daily email limits
+
+// Every form that leads to an email is paused, with this explanation, once the
+// day's allowance is used. The directory runs on free plans, and stopping is
+// how it stays free rather than running up a bill.
+function paused(what) {
+  return `<div class="notice" role="status"><p>${what} The directory runs on free services, which limit how much email it can send each day, and it has reached today's limit. It starts again at midnight UTC, ${untilReset()}.</p></div>`;
+}
+
+const PAUSED_ADD = "Adding tables is paused until tomorrow.";
+const PAUSED_CONTACT = "Writing to hosts is paused until tomorrow.";
+const PAUSED_LOST = "Sending new links is paused until tomorrow. Your listings and the links you already have still work.";
+const PAUSED_TABLE = "This table has received as many messages as it can today. Try again tomorrow.";
+
+function pausedError(what) {
+  return `${what} The directory has reached today's email limit; it starts again at midnight UTC, ${untilReset()}.`;
 }
 
 // ---------------------------------------------------------------- browse
@@ -175,10 +194,17 @@ async function listingPage(env, id, url, form = null, errors = {}) {
   if (!l) return notFound(env, "This table isn't listed. It may have been removed by its host or expired.");
 
   const done = url && url.searchParams.get("done") === "sent";
+  // A fresh view shows a notice instead of the form when no message could be sent.
+  // After a submission the form stays, with an error, so nothing typed is lost.
+  let pause = "";
+  if (!done && !form) {
+    if ((await countToday(env, `contact:${l.id}`)) >= CONTACTS_PER_LISTING_PER_DAY) pause = `<div class="notice" role="status"><p>${PAUSED_TABLE}</p></div>`;
+    else if (!(await canSendMail(env, "message"))) pause = paused(PAUSED_CONTACT);
+  }
   const v = form ? { name: form.get("name") || "", reply: form.get("reply") || "", message: form.get("message") || "" } : {};
   const contact = done
     ? `<div class="notice" role="status"><p>Your message was sent. The host will reply to your email address if they choose to.</p></div>`
-    : `<form method="post" action="/t/${esc(l.id)}/contact" class="form">
+    : pause || `<form method="post" action="/t/${esc(l.id)}/contact" class="form">
 ${errorSummary(errors)}
 ${textField("name", "Your name", { value: v.name, errors, max: 80, autocomplete: "name", hintText: "Optional." })}
 ${textField("reply", "Your email address", { value: v.reply, errors, type: "email", autocomplete: "email", max: 254, hintText: "The host sees this so they can reply." })}
@@ -195,8 +221,8 @@ ${detail(l)}
 ${contact}`;
   const status = Object.keys(errors).length ? 422 : 200;
   return htmlResponse(
-    layout(env, { title: `${l.place} | any table`, body, turnstile: !done && turnstileEnabled(env) }),
-    { status, turnstile: !done, cache: status === 200 && !form ? 300 : 0 },
+    layout(env, { title: `${l.place} | any table`, body, turnstile: !done && !pause && turnstileEnabled(env) }),
+    { status, turnstile: !done && !pause, cache: status === 200 && !form && !pause ? 300 : 0 },
   );
 }
 
@@ -211,8 +237,11 @@ async function contactSubmit(request, env, id, form) {
   }
   if (Object.keys(errors).length) return listingPage(env, id, null, form, errors);
 
+  if (!(await canSendMail(env, "message"))) {
+    return listingPage(env, id, null, form, { message: pausedError(PAUSED_CONTACT) });
+  }
   if (!(await withinLimit(env, `contact:${id}`, CONTACTS_PER_LISTING_PER_DAY))) {
-    return listingPage(env, id, null, form, { message: "This table has received as many messages as it can today. Try again tomorrow." });
+    return listingPage(env, id, null, form, { message: PAUSED_TABLE });
   }
 
   const from = data.name ? `${data.name} (${data.reply})` : data.reply;
@@ -247,7 +276,16 @@ function honeypot() {
   return `<div class="hp" aria-hidden="true"><label for="f-website">Leave this empty</label><input id="f-website" name="website" tabindex="-1" autocomplete="off"></div>`;
 }
 
-function addPage(env, values = {}, errors = {}) {
+async function addPage(env, values = {}, errors = {}) {
+  // A fresh visit gets a notice instead of a form once no publish link could be
+  // sent. A submission keeps its form, with an error, so nothing typed is lost.
+  const fresh = !Object.keys(errors).length && !Object.keys(values).length;
+  if (fresh && !(await canSendMail(env))) {
+    const body = `<h1>Add a table</h1>
+${paused(PAUSED_ADD)}
+<p>Please come back tomorrow. In the meantime, read the <a href="/rules">listing rules</a> so you're ready.</p>`;
+    return htmlResponse(layout(env, { title: "Add a table | any table", body, path: "/add" }));
+  }
   const body = `<h1>Add a table</h1>
 <p class="lede">List a table that keeps the weekly gathering so people nearby can find it. It takes a few minutes, and you'll get an email with a link to publish it.</p>
 <p>Before you start, read the <a href="/rules">listing rules</a>. In short: no home addresses, no one's personal details, no charge to attend, and nothing that isn't a table. People write to you through a form; your email address is never shown.</p>
@@ -274,6 +312,10 @@ async function addSubmit(request, env, form) {
     errors.turnstile = "The spam check didn't complete. Try again.";
   }
   if (Object.keys(errors).length) return addPage(env, { ...data, rulesChecked: form.get("rules") === "yes" }, errors);
+
+  if (!(await canSendMail(env))) {
+    return addPage(env, { ...data, rulesChecked: true }, { email: pausedError("Nothing was saved.") });
+  }
 
   const emailKey = `add:${await sha256hex(data.email)}`;
   if (!(await withinLimit(env, emailKey, 5))) {
@@ -483,7 +525,12 @@ async function manageSubmit(env, form) {
 
 // ---------------------------------------------------------------- lost link
 
-function lostPage(env, url, value = "", errors = {}) {
+async function lostPage(env, value = "", errors = {}) {
+  if (!value && !Object.keys(errors).length && !(await canSendMail(env))) {
+    const body = `<h1>Get a new link</h1>
+${paused(PAUSED_LOST)}`;
+    return htmlResponse(layout(env, { title: "Get a new link | any table", body }));
+  }
   const body = `<h1>Get a new link</h1>
 <p>Enter the address you listed with. If it has any listings, we'll email it a new manage link for each one. Older links stop working when new ones are sent.</p>
 <form method="post" action="/lost" class="form">
@@ -503,7 +550,10 @@ async function lostSubmit(request, env, form) {
   if (!(await verifyTurnstile(env, form.get("cf-turnstile-response"), request.headers.get("CF-Connecting-IP")))) {
     errors.turnstile = "The spam check didn't complete. Try again.";
   }
-  if (Object.keys(errors).length) return lostPage(env, null, email, errors);
+  if (Object.keys(errors).length) return lostPage(env, email, errors);
+  // Checked before looking the address up, so the answer is the same whether or
+  // not it has listings.
+  if (!(await canSendMail(env))) return lostPage(env, email, { email: pausedError(PAUSED_LOST) });
 
   // Same response whether or not the address has listings, so this page can't
   // be used to discover who has listed a table.

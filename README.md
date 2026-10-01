@@ -14,6 +14,8 @@ A host fills in a form and gets an email with a private link. Opening it and pre
 
 People who want to come write through a form on the listing. The message is forwarded to the host by email, and the host's address is never shown. Home tables are listed by area only; the host shares the address privately.
 
+The directory sends a limited number of emails each day so it stays within free plans. When the day's allowance is used, the forms that would send email (adding a table, writing to a host, and getting a new link) are replaced by a notice saying so and when they start again, at midnight UTC. Nothing is charged and nothing breaks; it simply waits for the next day.
+
 Five months after a host last confirmed a listing, they get a reminder. At six months an unconfirmed listing is hidden. A year after its last confirmation a hidden listing is deleted, with its email address. Unpublished listings are deleted after two days.
 
 Custodians can remove a listing only for one of the reasons published in the rules. They can't edit listings, the custodian page doesn't show email addresses, the host is emailed the reason, and every removal is recorded in the public data. Whoever holds the Cloudflare and Resend accounts can reach the email addresses and sent emails there; [Privacy](PRIVACY.md) says so plainly.

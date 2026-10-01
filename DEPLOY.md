@@ -35,7 +35,7 @@ npx wrangler secret put TURNSTILE_SECRET_KEY
 npx wrangler secret put RESEND_API_KEY
 ```
 
-Mail is sent from `tables@anytable.org` (`MAIL_FROM`). Keep `MAIL_DAILY_CAP` below the Resend free plan's daily allowance; check the current allowance before changing it. `MAIL_MESSAGE_CAP` is how many of those may be messages from visitors to hosts; the rest stay free for publish links, new links, reminders, and notices.
+Mail is sent from `tables@anytable.org` (`MAIL_FROM`). Keep `MAIL_DAILY_CAP` below the Resend free plan's daily allowance; check the current allowance before changing it. The Resend free plan also has a monthly allowance; `MAIL_DAILY_CAP` times 31 must stay under it (90 × 31 = 2,790, under 3,000). `MAIL_MESSAGE_CAP` is how many of those may be messages from visitors to hosts; the rest stay free for publish links, new links, reminders, and notices.
 
 If `RESEND_API_KEY` is missing, every email fails and the forms say so. `MAIL_LOG_ONLY`, which prints email to the log instead, is for local development only; never set it here, since the log would then hold every manage link.
 
@@ -66,8 +66,8 @@ The job commits straight to `main` as GitHub Actions. If `main` is protected by 
 | --- | --- | --- |
 | Workers Free requests per day | every page | The site stops answering until midnight UTC |
 | D1 free rows read or written per day | every page that isn't cached | Pages show an error until midnight UTC |
-| `MAIL_DAILY_CAP` (default 90) | every email | New listings and messages are refused until the next day, with a message saying so |
-| `MAIL_MESSAGE_CAP` (default 60) | messages from visitors to hosts | Further messages are refused until the next day; publish and manage links still go out |
+| `MAIL_DAILY_CAP` (default 90) | every email | The add, message, and new-link forms are replaced by a notice saying so until midnight UTC; a form already open shows the same message when sent, and keeps what was typed |
+| `MAIL_MESSAGE_CAP` (default 60) | messages from visitors to hosts | The message form on each listing is replaced by a notice until midnight UTC; adding tables and new links still work |
 | 10 messages per listing per day | the contact form | Further messages to that table are refused until the next day |
 | 5 new listings per address per day | the add form | Refused until the next day |
 | 3 lost-link requests per address per day | the lost-link form | Silently ignored until the next day |

@@ -23,6 +23,34 @@ export async function withinLimit(env, key, limit) {
   return row.count <= limit;
 }
 
+export async function countToday(env, key) {
+  const row = await env.DB.prepare("SELECT count FROM counters WHERE key = ?1 AND day = ?2")
+    .bind(key, today())
+    .first();
+  return row ? row.count : 0;
+}
+
+// Whether an email of this kind could still be sent today, without using any of
+// the allowance. Pages use this to say up front that a form is paused, rather
+// than letting someone fill it in only to be refused.
+export async function canSendMail(env, kind = "link") {
+  const cap = Number(env.MAIL_DAILY_CAP || 90);
+  if ((await countToday(env, "mail")) >= cap) return false;
+  if (kind === "message") {
+    const messageCap = Math.min(Number(env.MAIL_MESSAGE_CAP || 60), cap);
+    if ((await countToday(env, "mail:message")) >= messageCap) return false;
+  }
+  return true;
+}
+
+// "in about 5 hours", for telling people when the daily limits reset.
+export function untilReset() {
+  const now = new Date();
+  const midnight = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1);
+  const hours = Math.ceil((midnight - now.getTime()) / 3_600_000);
+  return hours <= 1 ? "in less than an hour" : `in about ${hours} hours`;
+}
+
 // Sends one email. Returns true if it was accepted for delivery.
 //
 // Every email counts against MAIL_DAILY_CAP so the project never depends on
