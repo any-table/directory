@@ -10,7 +10,7 @@ The directory adds three things held in trust for the tables, alongside the doma
 - the Resend account that sends the directory's email;
 - the Cloudflare Access application that guards the custodian page.
 
-Record them in `GOVERNANCE.md` in any-table/anytable, with the same successor access as the other assets. The database holds hosts' email addresses, so custody of it is custody of personal data.
+Record them in `GOVERNANCE.md` in any-table/anytable, with the same successor access as the other assets. The database holds hosts' email addresses, so custody of it is custody of personal data. Resend's logs hold a copy of every email sent, including manage links, so anyone who can read them can take control of listings. Give access to the Cloudflare account and the Resend account only to custodians, and remove it when their term ends.
 
 ## One-time setup
 

@@ -18,7 +18,7 @@ A listing is a table that keeps the weekly gathering described in the [card](htt
 
 Only its host: the person whose email address received the link to publish it. That link also lets them edit the listing, confirm that the table is still meeting, or remove it. There are no accounts and no passwords; whoever holds the link controls the listing, so it should not be shared.
 
-Custodians can't edit a listing and can't see the host's email address.
+Custodians can't edit a listing, and the page they use to remove listings doesn't show the host's email address. See [Privacy](https://tables.anytable.org/privacy) for who can see it and where.
 
 ## Listings expire
 

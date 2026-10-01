@@ -12,15 +12,23 @@ Everything in a listing except the email address. Home tables show only their ar
 
 ## How the email address is used
 
-Only to send the host the link to publish and manage the listing, reminders to confirm it, notice if it is hidden or removed, and messages from people who want to come. Custodians can't see it. It is never shared, sold, or used for anything else.
+Only to send the host the link to publish and manage the listing, reminders to confirm it, notice if it is hidden or removed, and messages from people who want to come. It is never sold, never given to anyone else, and never used for anything else.
+
+## Who can see it
+
+No page of the directory shows it, including the page custodians use to remove listings, and it is never published.
+
+It is stored in the directory's database on Cloudflare, and every email the directory sends goes through Resend. The people who hold those accounts, the custodians named in the governance record, could therefore see it there, along with the emails the directory has sent. They hold that access in trust for the tables, use it only to keep the directory running, and don't use it to look up hosts. Cloudflare and Resend handle it only to provide their services.
 
 ## Messages
 
-When someone writes to a host, the message is forwarded to the host by email with the sender's address as the reply address. The host's address is shown to the sender only if the host replies. Messages aren't stored.
+When someone writes to a host, the message is forwarded to the host by email with the sender's address as the reply address. The host's address is shown to the sender only if the host replies.
+
+The directory doesn't store messages. Resend, which sends them, keeps a copy of each email it sends, including its text, in its logs for a limited time.
 
 ## Deleting your information
 
-Removing a listing deletes it and its email address at once. Unpublished listings are deleted after two days, and hidden listings a year after they were last confirmed. Copies already published to GitHub stay in its history, which is why they never contain email addresses.
+Removing a listing deletes it and its email address from the directory at once. Unpublished listings are deleted after two days, and hidden listings a year after they were last confirmed. Copies of emails already sent stay in Resend's logs until they expire. Copies of the listing already published to GitHub stay in its history, which is why they never contain email addresses.
 
 ## Who runs it
 

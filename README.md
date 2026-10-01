@@ -16,7 +16,7 @@ People who want to come write through a form on the listing. The message is forw
 
 Five months after a host last confirmed a listing, they get a reminder. At six months an unconfirmed listing is hidden. A year after its last confirmation a hidden listing is deleted, with its email address. Unpublished listings are deleted after two days.
 
-Custodians can remove a listing only for one of the reasons published in the rules. They can't see email addresses or edit listings, the host is emailed the reason, and every removal is recorded in the public data.
+Custodians can remove a listing only for one of the reasons published in the rules. They can't edit listings, the custodian page doesn't show email addresses, the host is emailed the reason, and every removal is recorded in the public data. Whoever holds the Cloudflare and Resend accounts can reach the email addresses and sent emails there; [Privacy](PRIVACY.md) says so plainly.
 
 ## What it runs on
 
