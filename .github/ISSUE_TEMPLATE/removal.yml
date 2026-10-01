@@ -1,0 +1,57 @@
+name: Question a removal
+description: Ask about a listing a custodian removed, if you think the removal was wrong.
+title: "[Removal]: "
+labels:
+  - listing
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Every removal is published with its reason in
+        [data/tables.json](https://github.com/any-table/directory/blob/main/data/tables.json),
+        and the host is emailed the reason. If the problem is fixed, you can
+        simply [add the table again](https://tables.anytable.org/add).
+
+        **This issue is public.** Do not include your email address, your
+        manage link, a home address, or anyone's personal details. Never post
+        a manage link anywhere: whoever has it controls the listing.
+
+  - type: input
+    id: where
+    attributes:
+      label: Where the table meets
+      description: City, region, and country, as shown in the removal record.
+      placeholder: "Springfield, Arizona, US"
+    validations:
+      required: true
+
+  - type: input
+    id: removed
+    attributes:
+      label: Date of removal
+      placeholder: "2026-10-01"
+    validations:
+      required: true
+
+  - type: input
+    id: reason
+    attributes:
+      label: Reason given
+      placeholder: "Spam or advertising"
+    validations:
+      required: true
+
+  - type: textarea
+    id: why
+    attributes:
+      label: Why the removal was wrong
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I have not included an email address, a manage link, a home address, or anyone's personal details.
+          required: true

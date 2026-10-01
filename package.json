@@ -1,0 +1,21 @@
+{
+  "name": "anytable-directory",
+  "private": true,
+  "description": "The directory of tables at tables.anytable.org.",
+  "license": "CC0-1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "migrate:local": "wrangler d1 migrations apply anytable-directory --local",
+    "migrate:remote": "wrangler d1 migrations apply anytable-directory --remote",
+    "deploy": "wrangler deploy",
+    "check": "wrangler deploy --dry-run --outdir dist",
+    "test": "bash scripts/test.sh"
+  },
+  "dependencies": {
+    "marked": "^16.0.0"
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0"
+  }
+}

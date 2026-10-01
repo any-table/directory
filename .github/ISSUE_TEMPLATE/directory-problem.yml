@@ -1,0 +1,70 @@
+name: Directory problem
+description: Report something broken on tables.anytable.org, such as a page, a form, an email, or the nightly copy.
+title: "[Directory]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form for problems with how the directory works. To report a
+        listing that breaks the rules, use **Report a listing** instead.
+
+        **This issue is public.** Never post a manage link or the text of an
+        email the directory sent you; the link controls your listing. Leave
+        out email addresses and home addresses.
+
+        For a security problem, do not open an issue. Use
+        [private vulnerability reporting](https://github.com/any-table/directory/security/advisories/new).
+
+  - type: dropdown
+    id: kind
+    attributes:
+      label: What kind of problem is this?
+      options:
+        - Page missing or not loading
+        - Adding or publishing a listing
+        - Editing, confirming, or removing a listing
+        - Writing to a host
+        - Email didn't arrive or was wrong
+        - Getting a new link
+        - Layout, display, or accessibility
+        - Nightly copy in data/tables.json
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: url
+    attributes:
+      label: Page address
+      description: Not a manage or confirm link.
+      placeholder: "https://tables.anytable.org/add"
+    validations:
+      required: false
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What happened?
+      description: Describe what you did, what you saw, and what you expected.
+    validations:
+      required: true
+
+  - type: input
+    id: browser
+    attributes:
+      label: Browser and device
+      placeholder: "Example: Safari on iPhone"
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched existing issues for the same problem.
+          required: true
+        - label: I have not included a manage link, an email address, a home address, or anyone's personal details.
+          required: true

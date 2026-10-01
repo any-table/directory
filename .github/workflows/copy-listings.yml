@@ -1,0 +1,80 @@
+# Copies the public listings into data/tables.json every night.
+#
+# This is what keeps the directory ownerless: if the website is ever lost,
+# captured, or shut down, anyone can rebuild the list from this repository.
+# The export contains no email addresses or other contact details, and the
+# job refuses to commit a file that looks like it does.
+#
+# Scheduled runs start once the repository variable DIRECTORY_LIVE is set to
+# true (see DEPLOY.md), so the job doesn't fail every night before the site
+# exists. Running it by hand always works. Forks never run it.
+#
+# GitHub turns off scheduled workflows in a repository with no activity for
+# 60 days, and with few tables there may be nothing new to commit for that
+# long. Each run re-enables this workflow through the API, which resets that
+# clock, so the copy can't stop on its own.
+
+name: Copy public listings
+
+on:
+  schedule:
+    - cron: '41 5 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: copy-listings
+  cancel-in-progress: false
+
+jobs:
+  copy:
+    if: >-
+      github.repository == 'any-table/directory' &&
+      (github.event_name == 'workflow_dispatch' || vars.DIRECTORY_LIVE == 'true')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Keep the schedule enabled
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api -X PUT "repos/$GITHUB_REPOSITORY/actions/workflows/copy-listings.yml/enable"
+
+      - uses: actions/checkout@v7
+
+      - name: Download
+        run: |
+          # The query string skips the edge cache so the copy is current.
+          curl -fsS --retry 3 --retry-delay 10 \
+            "https://tables.anytable.org/data/tables.json?nightly=$(date -u +%F)" \
+            -o data/tables.json.new
+
+      - name: Check
+        run: |
+          python3 - << 'PY'
+          import json, re, sys
+          text = open("data/tables.json.new").read()
+          data = json.loads(text)
+          assert data.get("license") == "CC0-1.0", "unexpected license field"
+          assert isinstance(data.get("listings"), list), "listings missing"
+          if re.search(r"[^\s\"@]+@[^\s\"@]+\.[a-z]{2,}", text, re.I):
+              sys.exit("The export appears to contain an email address. Not committing.")
+          print(f"{len(data['listings'])} listings, {len(data.get('removals', []))} removals")
+          PY
+          mv data/tables.json.new data/tables.json
+
+      - name: Commit if changed
+        run: |
+          if git diff --quiet -- data/tables.json && git ls-files --error-unmatch data/tables.json > /dev/null 2>&1; then
+            echo "No changes."
+            exit 0
+          fi
+          git config user.name "any table directory"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/tables.json
+          git commit -m "Copy public listings for $(date -u +%F)"
+          # main may have moved since checkout; only this job writes data/.
+          git pull --rebase --quiet origin main
+          git push
