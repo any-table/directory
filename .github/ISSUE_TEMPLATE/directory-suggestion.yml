@@ -1,0 +1,37 @@
+name: Directory suggestion
+description: Suggest a change to how the directory works.
+title: "[Directory idea]: "
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        The directory deliberately has no accounts, no tracking, no
+        JavaScript of its own, and nothing that costs money to run.
+        Suggestions that would need those are unlikely to be taken up.
+
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would you change?
+    validations:
+      required: true
+
+  - type: textarea
+    id: why
+    attributes:
+      label: Why?
+      description: Who would this help, and how?
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched existing issues for the same idea.
+          required: true
+        - label: I have not included private or safeguarding-related information.
+          required: true

@@ -1,0 +1,64 @@
+name: Report a listing
+description: Tell the custodians that a listing breaks one of the listing rules.
+title: "[Listing]: "
+labels:
+  - listing
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Custodians may remove a listing only for one of the reasons in the
+        [listing rules](https://tables.anytable.org/rules). Disagreeing with
+        how a table keeps the gathering is not one of them.
+
+        **This issue is public.** Give the listing's link and the rule it
+        breaks. Do not copy the address, name, phone number, or other
+        personal details you are reporting; repeating them here would
+        publish them again.
+
+        A complaint about a person is not a listing problem. It belongs with
+        the table itself under
+        [On harm within](https://anytable.org/foundational/#on-harm-within),
+        or with the appropriate authorities. If someone is in danger, contact
+        local emergency services.
+
+  - type: input
+    id: listing
+    attributes:
+      label: Listing link
+      placeholder: "https://tables.anytable.org/t/abcd2345ef"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: reason
+    attributes:
+      label: Which rule does it break?
+      options:
+        - It charges for attendance or asks for money.
+        - It lists a home address or other private location.
+        - It contains someone's personal details.
+        - It impersonates another person or table.
+        - It is spam or advertising.
+        - It is not a table keeping the gathering.
+        - It contains unsafe or unlawful content.
+    validations:
+      required: true
+
+  - type: textarea
+    id: details
+    attributes:
+      label: Anything the custodians should know
+      description: Optional. Describe the problem without repeating any personal details.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I have not copied any address, name, phone number, or other personal details into this issue.
+          required: true
+        - label: This is about the listing, not a complaint about a person.
+          required: true

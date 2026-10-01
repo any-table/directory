@@ -56,6 +56,10 @@ npm test
 
 This starts the Worker against a fresh local database and walks through the whole flow: the listing rules, adding and publishing, editing, messaging a host, replacing a lost link, the public export, the daily job, and removal. Pull requests run it automatically.
 
+## Issues
+
+This repository has its own issue forms: report a listing that breaks the rules, question a removal, report a problem with the directory, or suggest a change. Each one asks you not to post personal details, since issues are public, and never to post a manage link. Problems with the text itself belong in [any-table/anytable](https://github.com/any-table/anytable/issues/new/choose). Security problems are reported privately; see the [security policy](https://github.com/any-table/directory/security/policy).
+
 ## License
 
 The code, rules, and public listings are dedicated to the public domain under [CC0 1.0 Universal](LICENSE).

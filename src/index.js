@@ -620,7 +620,7 @@ Reason: ${REMOVAL_REASONS[reason]}
 
 Removals are allowed only for the reasons published in the listing rules at ${env.SITE_URL}/rules, and every removal is recorded publicly with its reason. Your email address has been deleted from the directory.
 
-If you think this was a mistake, or the problem is fixed, you're welcome to add the table again. To raise the removal publicly, open an issue at https://github.com/any-table/directory.`,
+If you think this was a mistake, or the problem is fixed, you're welcome to add the table again. To raise the removal publicly, open an issue at https://github.com/any-table/directory/issues/new/choose. Don't include this email address or any manage link.`,
   });
   return redirect("/admin?done=removed");
 }

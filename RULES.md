@@ -38,7 +38,9 @@ Only for one of these reasons:
 
 Disagreeing with how a table keeps the gathering is not a reason. Neither is a complaint about a person, which is a matter for the table itself under [On harm within](https://anytable.org/foundational/#on-harm-within), or for the appropriate authorities.
 
-When a custodian removes a listing, the host is emailed the reason, and the removal is published with its reason in the directory's public data. A host who thinks a removal was wrong can add the table again or raise it publicly as an issue on [GitHub](https://github.com/any-table/directory).
+When a custodian removes a listing, the host is emailed the reason, and the removal is published with its reason in the directory's public data. A host who thinks a removal was wrong can add the table again or raise it publicly as an issue on [GitHub](https://github.com/any-table/directory/issues/new/choose).
+
+To report a listing that breaks these rules, open a [Report a listing](https://github.com/any-table/directory/issues/new/choose) issue with the listing's link and the rule it breaks. Issues are public, so don't repeat the address or personal details you're reporting.
 
 ## Listing is not endorsement
 
