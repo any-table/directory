@@ -56,7 +56,9 @@ That way no Cloudflare token is ever stored in GitHub.
 
 **5. Custodian page (optional).** In Cloudflare Zero Trust (free for up to 50 people), create a self-hosted Access application for `tables.anytable.org/admin`, with a policy allowing only the custodians' email addresses. Put the team domain (such as `anytable.cloudflareaccess.com`) in `ACCESS_TEAM_DOMAIN` and the application's audience tag in `ACCESS_AUD`. Until both are set, `/admin` returns 404. The Worker checks Access's signature itself, so the page stays closed even if the Access policy is misconfigured.
 
-**6. Nightly copy.** Nothing to set up: `.github/workflows/copy-listings.yml` runs on its own once the site is live. Run it once by hand from the Actions tab to create `data/tables.json`.
+**6. Nightly copy.** Once the site is live, run `.github/workflows/copy-listings.yml` once by hand from the Actions tab to create `data/tables.json`. Then, in the repository's Settings, under Secrets and variables, then Actions, then Variables, add a variable `DIRECTORY_LIVE` set to `true`; scheduled runs start after that.
+
+The job commits straight to `main` as GitHub Actions. If `main` is protected by a ruleset or branch protection, allow GitHub Actions to bypass it, or the copy will fail. Each run also re-enables the workflow, so GitHub's 60-day inactivity rule can't switch the schedule off; if the Actions tab ever shows it disabled, enable it again there.
 
 ## Limits, and what happens at them
 
