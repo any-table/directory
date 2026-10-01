@@ -36,6 +36,9 @@
     "TURNSTILE_SITE_KEY": "REPLACE_WITH_TURNSTILE_SITE_KEY",
     // Stays under the email provider's free daily allowance.
     "MAIL_DAILY_CAP": "90",
+    // How many of those may be messages from visitors to hosts. The rest are
+    // kept for publish links, new links, reminders, and notices.
+    "MAIL_MESSAGE_CAP": "60",
     // Cloudflare Access for /admin. Leave empty to disable the admin page.
     "ACCESS_TEAM_DOMAIN": "",
     "ACCESS_AUD": ""

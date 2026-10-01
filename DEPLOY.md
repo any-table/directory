@@ -35,7 +35,9 @@ npx wrangler secret put TURNSTILE_SECRET_KEY
 npx wrangler secret put RESEND_API_KEY
 ```
 
-Mail is sent from `tables@anytable.org` (`MAIL_FROM`). Keep `MAIL_DAILY_CAP` below the Resend free plan's daily allowance; check the current allowance before changing it.
+Mail is sent from `tables@anytable.org` (`MAIL_FROM`). Keep `MAIL_DAILY_CAP` below the Resend free plan's daily allowance; check the current allowance before changing it. `MAIL_MESSAGE_CAP` is how many of those may be messages from visitors to hosts; the rest stay free for publish links, new links, reminders, and notices.
+
+If `RESEND_API_KEY` is missing, every email fails and the forms say so. `MAIL_LOG_ONLY`, which prints email to the log instead, is for local development only; never set it here, since the log would then hold every manage link.
 
 **4. Deploy.** The first time, from a checkout:
 
@@ -63,6 +65,7 @@ That way no Cloudflare token is ever stored in GitHub.
 | Workers Free requests per day | every page | The site stops answering until midnight UTC |
 | D1 free rows read or written per day | every page that isn't cached | Pages show an error until midnight UTC |
 | `MAIL_DAILY_CAP` (default 90) | every email | New listings and messages are refused until the next day, with a message saying so |
+| `MAIL_MESSAGE_CAP` (default 60) | messages from visitors to hosts | Further messages are refused until the next day; publish and manage links still go out |
 | 10 messages per listing per day | the contact form | Further messages to that table are refused until the next day |
 | 5 new listings per address per day | the add form | Refused until the next day |
 | 3 lost-link requests per address per day | the lost-link form | Silently ignored until the next day |

@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # End-to-end check against a local `wrangler dev` (see README).
 # Mail is printed to the dev server's log instead of sent; pass that log's path.
+# Expects the low mail caps that scripts/test.sh sets (MAIL_DAILY_CAP=8,
+# MAIL_MESSAGE_CAP=2) so the last section can reach them.
 set -euo pipefail
 BASE="${BASE:-http://localhost:8787}"
 LOG="${1:?usage: scripts/smoke.sh path/to/dev.log}"
@@ -99,6 +101,29 @@ check_code 200 "remove without the box re-shows the page" "${O[@]}" --data-urlen
 check_code 200 "listing still there" "$NEW"
 check_has "Removed" "removed" "${O[@]}" --data-urlencode id="$ID" --data-urlencode t="$NEWTOK" --data-urlencode action=remove --data-urlencode sure=yes "$BASE/manage"
 check_code 404 "manage link dead after removal" "$NEW"
+
+echo "mail limits"
+# Three emails have gone out so far: one publish link, one message, one new link.
+add_as() { curl -s -o /dev/null -w '%{http_code}' "${O[@]}" "${LISTING[@]}" --data-urlencode email="$1" --data-urlencode rules=yes "$BASE/add"; }
+[[ "$(add_as second@example.com)" == 303 ]] && ok "second listing accepted (mail 4)" || bad "second listing accepted (mail 4)"
+sleep 1
+LINK2=$(last_link); ID2=$(sed -E 's/.*id=([a-z2-9]+).*/\1/' <<<"$LINK2"); TOK2=$(sed -E 's/.*t=//' <<<"$LINK2")
+check_code 303 "second listing published" "${O[@]}" --data-urlencode id="$ID2" --data-urlencode t="$TOK2" "$BASE/confirm"
+MANAGE2="$BASE/manage?id=$ID2&t=$TOK2"
+MSG=(--data-urlencode reply=visitor@example.com --data-urlencode "message=Hello, I'd like to come on Tuesday.")
+check_code 303 "second message sent (mail 5, message 2 of 2)" "${O[@]}" "${MSG[@]}" "$BASE/t/$ID2/contact"
+check_has "be sent right now" "third message refused by MAIL_MESSAGE_CAP" "${O[@]}" "${MSG[@]}" "$BASE/t/$ID2/contact"
+for n in 3 4 5; do
+  [[ "$(add_as "host$n@example.com")" == 303 ]] && ok "listing $n accepted (mail $((n + 3)))" || bad "listing $n accepted (mail $((n + 3)))"
+done
+check_has "nothing was saved" "listing refused at MAIL_DAILY_CAP" "${O[@]}" "${LISTING[@]}" --data-urlencode email=host6@example.com --data-urlencode rules=yes "$BASE/add"
+check_code 303 "lost link request at the cap" "${O[@]}" --data-urlencode email=second@example.com "$BASE/lost"
+check_code 200 "link still works when the new one couldn't be sent" "$MANAGE2"
+npx wrangler d1 execute anytable-directory --local \
+  --command "UPDATE listings SET confirmed_at = '$(date -u -d '200 days ago' +%Y-%m-%dT%H:%M:%S.000Z)' WHERE id = '$ID2'" > /dev/null 2>&1
+check_code 200 "daily job at the cap" "$BASE/__scheduled?cron=23+4+*+*+*"
+check_code 404 "unconfirmed listing hidden" "$BASE/t/$ID2?fresh=$RANDOM"
+check_has "Hidden." "link still works when the hidden notice couldn't be sent" "$MANAGE2"
 
 echo
 echo "$pass passed, $fail failed"

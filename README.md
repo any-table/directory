@@ -39,12 +39,12 @@ Node 20 or later.
 
 ```sh
 npm ci
-printf 'TURNSTILE_DISABLED=true\nSITE_URL=http://localhost:8787\n' > .dev.vars
+printf 'TURNSTILE_DISABLED=true\nMAIL_LOG_ONLY=true\nSITE_URL=http://localhost:8787\n' > .dev.vars
 npm run migrate:local
 npm run dev
 ```
 
-Open http://localhost:8787. Locally, email is printed to the terminal instead of sent, so the publish and manage links appear there. `TURNSTILE_DISABLED` turns off the spam check for local use only; it is never set in production.
+Open http://localhost:8787. `MAIL_LOG_ONLY` prints email to the terminal instead of sending it, so the publish and manage links appear there, and `TURNSTILE_DISABLED` turns off the spam check. Both are for local use only and are never set in production. Without `MAIL_LOG_ONLY`, a missing `RESEND_API_KEY` makes every email fail rather than print.
 
 To run the daily job by hand, start the dev server with `npx wrangler dev --test-scheduled` and open http://localhost:8787/__scheduled.
 

@@ -103,10 +103,11 @@ async function listingByToken(env, id, token) {
   return (await sha256hex(token)) === row.token_hash ? row : null;
 }
 
-async function rotateToken(env, id) {
-  const token = newToken();
+// Replacing a token makes every earlier link for that listing stop working, so
+// it is only stored after the email carrying the new link has been accepted.
+// Otherwise a full mail cap would leave the host with no working link.
+async function storeToken(env, id, token) {
   await env.DB.prepare("UPDATE listings SET token_hash = ?1 WHERE id = ?2").bind(await sha256hex(token), id).run();
-  return token;
 }
 
 const manageLink = (env, id, token) => `${env.SITE_URL}/manage?id=${id}&t=${token}`;
@@ -216,6 +217,7 @@ async function contactSubmit(request, env, id, form) {
 
   const from = data.name ? `${data.name} (${data.reply})` : data.reply;
   const sent = await sendMail(env, {
+    kind: "message",
     to: l.email,
     replyTo: data.reply,
     subject: `A message about your table: ${l.place}`,
@@ -508,12 +510,9 @@ async function lostSubmit(request, env, form) {
   if (await withinLimit(env, `lost:${await sha256hex(email)}`, 3)) {
     const { results } = await env.DB.prepare("SELECT * FROM listings WHERE email = ?1").bind(email).all();
     if (results.length) {
-      const lines = [];
-      for (const l of results) {
-        const token = await rotateToken(env, l.id);
-        lines.push(`${summaryLines(l)}\n  ${manageLink(env, l.id, token)}`);
-      }
-      await sendMail(env, {
+      const tokens = results.map(() => newToken());
+      const lines = results.map((l, i) => `${summaryLines(l)}\n  ${manageLink(env, l.id, tokens[i])}`);
+      const sent = await sendMail(env, {
         to: email,
         subject: "Your links to manage your tables",
         text: `Someone, hopefully you, asked for new links to manage the tables listed from this address:
@@ -524,6 +523,9 @@ Each link lets you edit the listing, confirm it's still meeting, or remove it. E
 
 If you didn't ask for this, you can ignore it. Your listings haven't changed.`,
       });
+      if (sent) {
+        for (const [i, l] of results.entries()) await storeToken(env, l.id, tokens[i]);
+      }
     }
   }
   return redirect("/sent?to=lost");
@@ -684,8 +686,10 @@ This link replaces any earlier ones for this listing. Don't forward it.`,
   ).bind(ago(HIDE_AFTER_DAYS)).all();
   for (const l of toHide) {
     await env.DB.prepare("UPDATE listings SET status = 'hidden', updated_at = ?1 WHERE id = ?2").bind(now(), l.id).run();
-    const token = await rotateToken(env, l.id);
-    await sendMail(env, {
+    // If the notice can't be sent, the listing is still hidden and the host's
+    // existing link keeps working, so they can list it again with that.
+    const token = newToken();
+    const sent = await sendMail(env, {
       to: l.email,
       subject: "Your table is no longer listed",
       text: `This table hasn't been confirmed for six months, so it's been hidden from the any table directory:
@@ -697,6 +701,7 @@ ${manageLink(env, l.id, token)}
 
 If you do nothing, the listing and your email address will be deleted in six months.`,
     });
+    if (sent) await storeToken(env, l.id, token);
   }
   log.push(`hidden: ${toHide.length}`);
 
